@@ -1,0 +1,9 @@
+{
+  "name": "babyshower-amanda",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baby Shower de Amanda",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.5"
+  }
+}
