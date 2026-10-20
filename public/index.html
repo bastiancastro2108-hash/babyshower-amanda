@@ -118,6 +118,16 @@ textarea{min-height:84px;resize:vertical}
 .gsel select{padding:8px 10px;font-size:.88rem;border-radius:10px}
 .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
 @media (max-width:620px){.ggrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.gcard .gb{padding:8px 10px 10px}.gcard .ga{padding:0 10px 10px}.gcard .ga .btn{flex:1 1 100%}.gcard .gp{font-size:1.15rem}.gstats b{font-size:1.5rem}}
+.ggrid.folded{display:flex;flex-direction:column;gap:10px}
+.gfold{border:1px solid var(--line);border-radius:16px;background:#fffdfb;overflow:hidden}
+.gfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;font-family:var(--ui)}
+.gfold>summary::-webkit-details-marker{display:none}
+.gfold>summary:hover{background:var(--blush-2)}
+.gfold .gft{font-family:var(--caps);font-size:1.3rem;color:var(--rose-ink);font-weight:600}
+.gfold>summary small{margin-left:auto;font-size:.75rem;color:var(--muted)}
+.gchev{width:10px;height:10px;border-right:2px solid var(--rose);border-bottom:2px solid var(--rose);transform:rotate(45deg);transition:transform .2s;margin:0 4px 4px 4px;flex:none}
+.gfold[open] .gchev{transform:rotate(-135deg);margin-bottom:-4px}
+.gfold>.ggrid{padding:0 12px 14px}
 .ghead{grid-column:1/-1;font-family:var(--caps);font-size:1.3rem;color:var(--rose-ink);margin:10px 0 -2px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .ghead small{font-family:var(--ui);font-size:.75rem;color:var(--muted)}
 .gcard{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-family:var(--ui);min-width:0}
@@ -337,7 +347,7 @@ details summary{cursor:pointer;font-family:var(--ui);font-weight:600;color:var(-
   <!-- Gifts (visible when list exists) -->
   <section class="panel" id="giftPanel" aria-labelledby="giftT">
     <h2 id="giftT">Lista de regalos</h2>
-    <p class="lead">Todo lo que Amanda necesitará en su primer año. Elige un regalo, cómpralo donde prefieras y Karen lo dejará reservado a tu nombre para que no se repita. Lo más importante es tu compañía.</p>
+    <p class="lead">Todo lo que Amanda necesitará en su primer año. Toca una categoría para ver sus regalos. Al reservar uno, queda apartado a tu nombre al instante para que no se repita. Lo más importante es tu compañía.</p>
     <div class="gstats" id="giftSum"></div>
     <div class="gtools">
       <div class="seg" role="group" aria-label="Mostrar">
@@ -645,7 +655,7 @@ function renderGifts(){
   $("#pubCount").textContent = dirty === 1 ? "1 cambio sin publicar" : `${dirty} cambios sin publicar`;
 }
 /* ---------- Public gift grid ---------- */
-let gShow = "all";
+let gShow = "all"; const openCats = new Set();
 function fillCatSel(){
   const sel = $("#gCatSel"); const cur = sel.value; const cats = groupGifts().map(x=>x.cat);
   sel.innerHTML = '<option value="">Todas</option>' + cats.map(c=>`<option${c===cur?" selected":""}>${esc(c)}</option>`).join("");
@@ -673,15 +683,19 @@ function renderPublic(){
   if (!list.length) { el.innerHTML = '<div class="empty" style="grid-column:1/-1">No hay regalos con estos filtros.</div>'; return; }
   if (sort === "cat") {
     const groups = groupGifts().filter(gr => !cat || gr.cat===cat);
+    el.classList.add("folded");
     el.innerHTML = groups.map(gr => { const items = list.filter(g=>g.cat===gr.cat); if(!items.length) return "";
-      return `<h3 class="ghead">${esc(gr.cat)}<small>${gr.items.filter(g=>!isFull(g)).length} de ${gr.items.length} disponibles</small></h3>` + items.map(card).join(""); }).join("");
+      const open = !!cat || openCats.has(gr.cat);
+      return `<details class="gfold" data-cat="${esc(gr.cat)}"${open?" open":""}><summary><span class="gft">${esc(gr.cat)}</span><small>${gr.items.filter(g=>!isFull(g)).length} de ${gr.items.length} disponibles</small><span class="gchev" aria-hidden="true"></span></summary><div class="ggrid">${items.map(card).join("")}</div></details>`; }).join("");
   } else {
     list = [...list].sort((a,b)=> sort==="pa" ? (a.price||0)-(b.price||0) : sort==="pd" ? (b.price||0)-(a.price||0) : String(a.store).localeCompare(String(b.store),"es") || (a.price||0)-(b.price||0));
+    el.classList.remove("folded");
     el.innerHTML = list.map(card).join("");
   }
 }
 document.querySelectorAll(".segb").forEach(b => b.addEventListener("click", () => { gShow = b.dataset.show; document.querySelectorAll(".segb").forEach(x=>x.setAttribute("aria-pressed", x===b)); renderPublic(); }));
-$("#gCatSel").addEventListener("change", renderPublic); $("#gSort").addEventListener("change", renderPublic);
+$("#gCatSel").addEventListener("change", renderPublic);
+$("#giftPublic").addEventListener("toggle", e => { const d = e.target; if (!d.classList || !d.classList.contains("gfold")) return; if (d.open) openCats.add(d.dataset.cat); else openCats.delete(d.dataset.cat); }, true); $("#gSort").addEventListener("change", renderPublic);
 function openPick(g){
   const box = $("#pickBox"); const q = qtyOf(g), left = leftOf(g);
   box.innerHTML = `<button class="mclose" type="button" data-act="close" aria-label="Cerrar">×</button>
